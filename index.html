@@ -310,7 +310,7 @@
                             </div>
                             <div>
                                 <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Tanggal & Waktu Inspeksi (WITA) <span class="text-rose-500">*</span></label>
-                                <input type="datetime-local" id="inspection-date" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent text-sm">
+                                <input type="datetime-local" id="inspection-date" required readonly class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed focus:outline-none text-sm pointer-events-none">
                             </div>
                             <div>
                                 <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Masa Kadaluarsa Media <span class="text-rose-500">*</span></label>
@@ -503,22 +503,17 @@
 
         // Helper untuk mendapatkan Tanggal & Jam saat ini dalam Waktu Indonesia Tengah (WITA / Asia/Makassar)
         function getWitaDateTime() {
-            try {
-                const formatter = new Intl.DateTimeFormat('sv-SE', {
-                    timeZone: 'Asia/Makassar',
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
-                });
-                return formatter.format(new Date()).replace(' ', 'T');
-            } catch (e) {
-                const now = new Date();
-                const wita = new Date(now.getTime() + (8 * 60 + now.getTimezoneOffset()) * 60000);
-                return wita.toISOString().slice(0, 16);
-            }
+            const now = new Date();
+            const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+            const witaDate = new Date(utc + (3600000 * 8)); // WITA adalah UTC+8
+            
+            const year = witaDate.getFullYear();
+            const month = String(witaDate.getMonth() + 1).padStart(2, '0');
+            const day = String(witaDate.getDate()).padStart(2, '0');
+            const hours = String(witaDate.getHours()).padStart(2, '0');
+            const minutes = String(witaDate.getMinutes()).padStart(2, '0');
+            
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
         }
 
         // Initialize App on DOM Load
@@ -804,6 +799,9 @@
                 updateDashboard();
             } else if (tabName === 'history') {
                 renderHistoryTable();
+            } else if (tabName === 'form') {
+                // Pastikan waktu di-refresh ke waktu terbaru saat tab form dibuka
+                document.getElementById('inspection-date').value = getWitaDateTime();
             }
         }
 
