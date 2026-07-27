@@ -60,7 +60,6 @@
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased font-sans min-h-screen flex flex-col">
 
-    <!-- Top Navigation Bar -->
     <header class="bg-slate-900 text-white shadow-lg sticky top-0 z-40 no-print">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
@@ -118,7 +117,6 @@
         </div>
     </header>
 
-    <!-- Main Container -->
     <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-20 md:pb-8">
 
         <!-- VIEW 1: DASHBOARD -->
@@ -146,7 +144,6 @@
                 </div>
             </div>
 
-            <!-- Stats Cards Grid -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
                     <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl font-bold">
@@ -193,7 +190,6 @@
                 </div>
             </div>
 
-            <!-- Charts Section -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!-- Status Doughnut Chart -->
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 lg:col-span-1 flex flex-col justify-between">
@@ -229,7 +225,6 @@
                 </div>
             </div>
 
-            <!-- Recent Inspections Table Preview -->
             <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                 <div class="p-5 border-b border-slate-100 flex items-center justify-between">
                     <h3 class="font-bold text-slate-900 flex items-center space-x-2">
@@ -281,7 +276,6 @@
                             <span>1. Identitas & Lokasi APAR</span>
                         </h3>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <!-- Kolom Nama Petugas dipindah ke atas -->
                             <div>
                                 <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Nama Petugas Pemeriksa <span class="text-rose-500">*</span></label>
                                 <input type="text" id="inspector-name" required placeholder="Masukkan nama terang" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent text-sm">
@@ -340,13 +334,7 @@
 
                         <div class="grid grid-cols-1 gap-4" id="checklist-container">
                             <!-- Dynamically generated checklist items for the requested fields:
-                                 1. Pin Pengaman
-                                 2. Tuas
-                                 3. Pengukur tekanan
-                                 4. Selang
-                                 5. Tabung
-                                 6. Nozzle
-                                 7. Sabuk Tabung
+                                 1. Pin Pengaman, 2. Tuas, 3. Pengukur tekanan, 4. Selang, 5. Tabung, 6. Nozzle, 7. Sabuk Tabung
                             -->
                         </div>
                     </div>
@@ -359,7 +347,6 @@
                         </h3>
 
                         <div class="space-y-6">
-                            <!-- Catatan Section dipindah ke atas Dokumentasi -->
                             <div>
                                 <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Catatan Tambahan / Tindakan</label>
                                 <textarea id="inspection-notes" rows="3" placeholder="Tuliskan catatan perbaikan jika ada komponen rusak..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent text-sm resize-none"></textarea>
@@ -491,6 +478,21 @@
         <!-- Dynamic printable content generated on demand -->
     </div>
 
+    <!-- Global Custom Message Box / Modal -->
+    <div id="custom-msg-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4 no-print">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-xl overflow-hidden flex flex-col scale-95 transform transition-transform duration-300" id="custom-msg-content">
+            <div class="p-5 border-b border-slate-100 flex items-center space-x-3" id="custom-msg-header">
+            </div>
+            <div class="p-5 text-sm text-slate-600" id="custom-msg-body">
+            </div>
+            <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end space-x-3" id="custom-msg-footer">
+            </div>
+        </div>
+    </div>
+
+    <!-- Global Toast Container -->
+    <div id="toast-container" class="fixed top-5 right-5 z-[10000] flex flex-col space-y-3 pointer-events-none no-print"></div>
+
     <!-- JavaScript Logic -->
     <script>
         // Key requirements array for APAR checklist
@@ -510,7 +512,7 @@
         let chartStatusInstance = null;
         let chartChecklistInstance = null;
 
-        // URL Google Apps Script Backend (Menyimpan & Menarik Data dari Spreadsheet)
+        // URL Google Apps Script Backend
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby0rmDQMiLZv7FVySTBK4VsEAH-y0etwhOv5wMrR8ja_jGkbuH6OopEFOtKQreVPP_k/exec";
 
         // Helper untuk mendapatkan Tanggal & Jam saat ini dalam Waktu Indonesia Tengah (WITA / Asia/Makassar)
@@ -527,6 +529,80 @@
             
             return `${year}-${month}-${day}T${hours}:${minutes}`;
         }
+
+        // --- Custom Alert & Toast System ---
+        let confirmCallback = null;
+
+        function showToast(msg, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            let color = 'bg-slate-800';
+            let icon = 'fa-info-circle';
+            if (type === 'success') { color = 'bg-emerald-600'; icon = 'fa-check-circle'; }
+            if (type === 'error') { color = 'bg-rose-600'; icon = 'fa-circle-exclamation'; }
+            if (type === 'warning') { color = 'bg-amber-500'; icon = 'fa-triangle-exclamation'; }
+
+            toast.className = `flex items-center space-x-3 ${color} text-white px-4 py-3 rounded-xl shadow-lg transform transition-all duration-300 translate-x-full opacity-0 pointer-events-auto`;
+            toast.innerHTML = `<i class="fa-solid ${icon}"></i><span class="text-sm font-medium">${msg}</span>`;
+
+            container.appendChild(toast);
+            requestAnimationFrame(() => toast.classList.remove('translate-x-full', 'opacity-0'));
+            setTimeout(() => {
+                toast.classList.add('translate-x-full', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function customAlert(title, message, type = 'info') {
+            const modal = document.getElementById('custom-msg-modal');
+            const header = document.getElementById('custom-msg-header');
+            const body = document.getElementById('custom-msg-body');
+            const footer = document.getElementById('custom-msg-footer');
+
+            let iconStr = '<i class="fa-solid fa-info-circle text-blue-500 text-xl"></i>';
+            if(type === 'error') iconStr = '<i class="fa-solid fa-circle-exclamation text-rose-500 text-xl"></i>';
+            if(type === 'warning') iconStr = '<i class="fa-solid fa-triangle-exclamation text-amber-500 text-xl"></i>';
+
+            header.innerHTML = `${iconStr}<h3 class="font-bold text-slate-800 text-lg">${title}</h3>`;
+            body.innerHTML = `<p>${message.replace(/\n/g, '<br>')}</p>`;
+            footer.innerHTML = `<button onclick="closeCustomMsg()" class="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-medium transition">Tutup</button>`;
+
+            modal.classList.remove('hidden');
+            setTimeout(() => document.getElementById('custom-msg-content').classList.remove('scale-95'), 10);
+        }
+
+        function customConfirm(title, message, callback) {
+            const modal = document.getElementById('custom-msg-modal');
+            const header = document.getElementById('custom-msg-header');
+            const body = document.getElementById('custom-msg-body');
+            const footer = document.getElementById('custom-msg-footer');
+
+            header.innerHTML = `<i class="fa-solid fa-circle-question text-brand-600 text-xl"></i><h3 class="font-bold text-slate-800 text-lg">${title}</h3>`;
+            body.innerHTML = `<p>${message.replace(/\n/g, '<br>')}</p>`;
+            confirmCallback = callback;
+
+            footer.innerHTML = `
+                <button onclick="closeCustomMsg()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50 transition">Batal</button>
+                <button onclick="executeConfirm()" class="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-sm font-medium transition shadow-md">Ya, Lanjutkan</button>
+            `;
+
+            modal.classList.remove('hidden');
+            setTimeout(() => document.getElementById('custom-msg-content').classList.remove('scale-95'), 10);
+        }
+
+        function closeCustomMsg() {
+            document.getElementById('custom-msg-content').classList.add('scale-95');
+            setTimeout(() => {
+                document.getElementById('custom-msg-modal').classList.add('hidden');
+                confirmCallback = null;
+            }, 300);
+        }
+
+        function executeConfirm() {
+            if(confirmCallback) confirmCallback();
+            closeCustomMsg();
+        }
+        // ------------------------------------
 
         // Initialize App on DOM Load
         window.addEventListener('DOMContentLoaded', () => {
@@ -545,44 +621,61 @@
             const refreshBtns = document.querySelectorAll('.fa-arrows-rotate');
             refreshBtns.forEach(icon => icon.classList.add('fa-spin'));
             
+            const tbody = document.getElementById('recent-table-body');
+            const historyBody = document.getElementById('history-table-body');
+
             try {
                 // Tampilkan loading animation di tabel
-                const tbody = document.getElementById('recent-table-body');
-                if(tbody) tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Mengambil data dari Spreadsheet...</td></tr>`;
-                
-                const historyBody = document.getElementById('history-table-body');
+                if(tbody) tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Sinkronisasi dari server...</td></tr>`;
                 if(historyBody) historyBody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Sinkronisasi dari server...</td></tr>`;
 
-                // Tarik JSON Data menggunakan GET method ke URL Google Script
+                // Tarik JSON Data menggunakan GET
                 const response = await fetch(GOOGLE_SCRIPT_URL, {
                     method: 'GET',
-                    mode: 'cors'
                 });
                 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 
-                const result = await response.json();
+                const rawText = await response.text();
+                let result;
+                
+                try {
+                    result = JSON.parse(rawText);
+                } catch (parseError) {
+                    throw new Error("Akses Ditolak Google. Pastikan setelan Apps Script -> Who has access: 'Anyone'.");
+                }
 
                 if (result.status === 'success') {
                     inspections = result.data; 
-                    saveToLocalStorage(); // Simpan ke memori lokal sebagai backup/cache
+                    saveToLocalStorage(); // Simpan ke memori lokal
+                    showToast("Sinkronisasi Cloud berhasil.", "success");
                 } else {
-                    console.warn("Gagal mengambil data, beralih ke memori lokal:", result.message);
-                    loadLocalStorageData();
+                    throw new Error(result.message);
                 }
             } catch (error) {
-                console.error("Gagal terhubung ke Cloud (CORS/Akses Terblokir). Beralih ke Data Lokal. Detail Error:", error);
-                console.warn("SOLUSI PENTING: Pastikan Google Apps Script Anda di-Deploy dengan 'Who has access' (Siapa yang memiliki akses) disetel ke 'ANYONE' (Siapa saja).");
-                loadLocalStorageData(); // Gunakan data lama jika tidak ada internet atau diblokir CORS
+                // Ubah dari error menjadi warn agar tidak merusak console dan UI
+                console.warn("Mode Offline aktif:", error.message);
+                
+                // Gunakan data lama (lokal) jika gagal
+                loadLocalStorageData(); 
+
+                if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
+                    showToast("Mode Offline: Menggunakan data lokal (Koneksi Cloud terhalang CORS).", "warning");
+                } else {
+                    showToast(`Gagal membaca Cloud: ${error.message}`, "warning");
+                }
+
             } finally {
-                // Matikan putaran loading & update grafik/tabel dengan data baru
-                refreshBtns.forEach(icon => icon.classList.remove('fa-spin'));
+                // Pastikan tampilan selalu disegarkan, baik saat gagal maupun sukses
                 updateDashboard();
                 if (!document.getElementById('view-history').classList.contains('hidden')) {
                     filterHistory();
                 }
+                
+                // Matikan putaran loading
+                refreshBtns.forEach(icon => icon.classList.remove('fa-spin'));
             }
         }
 
@@ -642,7 +735,7 @@
             if (file) {
                 // Validate file size (e.g., max 5MB to prevent Google Script limits)
                 if (file.size > 5 * 1024 * 1024) {
-                    alert("Ukuran foto terlalu besar. Maksimal 5MB.");
+                    showToast("Ukuran foto terlalu besar. Maksimal 5MB.", "error");
                     input.value = '';
                     return;
                 }
@@ -707,7 +800,7 @@
 
             // Validasi Foto Dokumentasi
             if (!photoBase64) {
-                alert("Mohon sertakan foto dokumentasi APAR sebelum menyimpan!");
+                showToast("Mohon sertakan foto dokumentasi APAR sebelum menyimpan!", "warning");
                 return;
             }
 
@@ -750,13 +843,13 @@
                     body: JSON.stringify(newRecord)
                 });
                 
-                alert(`Inspeksi APAR [${newRecord.code}] Berhasil Disimpan ke Cloud (Spreadsheet)!\nStatus: ${newRecord.status}`);
+                showToast(`Inspeksi APAR [${newRecord.code}] Berhasil Disimpan!`, "success");
                 
                 // Refresh data langsung dari Cloud agar tabel riwayat dan grafik tersinkronisasi
                 await loadDataFromCloud();
             } catch (error) {
                 console.error("Gagal mengirim ke Spreadsheet:", error);
-                alert(`Data disimpan lokal, namun gagal terkirim ke Cloud. Pastikan koneksi internet stabil.`);
+                customAlert("Gagal Kirim ke Server", "Data disimpan lokal, namun gagal terkirim ke Cloud. Pastikan koneksi internet stabil.", "warning");
             }
 
             // Kembalikan tombol seperti semula
@@ -995,12 +1088,13 @@
         }
 
         function deleteInspection(id) {
-            if (confirm('Apakah Anda yakin ingin menghapus catatan inspeksi ini dari memori lokal (Web)?\nCatatan: Ini tidak akan menghapus data yang sudah masuk ke Google Spreadsheet.')) {
+            customConfirm('Konfirmasi Hapus', 'Apakah Anda yakin ingin menghapus catatan inspeksi ini dari memori lokal?\n\nCatatan: Ini tidak akan menghapus data yang sudah terkirim ke Google Spreadsheet.', () => {
                 inspections = inspections.filter(i => i.id !== id);
                 saveToLocalStorage();
                 filterHistory();
                 updateDashboard();
-            }
+                showToast("Data berhasil dihapus.", "success");
+            });
         }
 
         // Modal View Detail & Printable Card
@@ -1211,12 +1305,12 @@
                         inspections = importedData;
                         saveToLocalStorage();
                         updateDashboard();
-                        alert('Data inspeksi berhasil diimpor!');
+                        showToast('Data inspeksi berhasil diimpor!', 'success');
                     } else {
-                        alert('Format file JSON tidak valid.');
+                        showToast('Format file JSON tidak valid.', 'error');
                     }
                 } catch (err) {
-                    alert('Gagal membaca file JSON.');
+                    showToast('Gagal membaca file JSON.', 'error');
                 }
             };
             reader.readAsText(file);
