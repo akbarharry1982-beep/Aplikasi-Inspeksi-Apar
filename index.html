@@ -388,16 +388,29 @@
                             <!-- Photo Documentation Section with Environment Camera Capture -->
                             <div>
                                 <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Dokumentasi (Foto) <span class="text-rose-500">*</span></label>
-                                <div class="border border-slate-300 rounded-xl bg-slate-50 overflow-hidden relative flex flex-col items-center justify-center min-h-[144px] p-2 hover:bg-slate-100 transition">
-                                    <input type="file" id="documentation-photo" accept="image/*" capture="environment" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="previewPhoto(this)">
-                                    
-                                    <div id="photo-placeholder" class="text-center text-slate-400 flex flex-col items-center pointer-events-none">
-                                        <i class="fa-solid fa-camera text-3xl mb-2 text-red-500"></i>
-                                        <span class="text-xs font-medium">Ketuk untuk Ambil Foto (Kamera Belakang) atau Galeri</span>
+                                
+                                <!-- Container Pilihan Aksi -->
+                                <div id="photo-action-container" class="grid grid-cols-2 gap-3">
+                                    <!-- Tombol Kamera -->
+                                    <div class="relative flex flex-col items-center justify-center p-4 border-2 border-dashed border-red-300 rounded-xl bg-red-50 hover:bg-red-100 transition cursor-pointer">
+                                        <input type="file" id="doc-camera" accept="image/*" capture="environment" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="previewPhoto(this)">
+                                        <i class="fa-solid fa-camera text-2xl text-red-500 mb-2"></i>
+                                        <span class="text-xs font-medium text-red-700 text-center">Buka Kamera</span>
                                     </div>
                                     
-                                    <img id="photo-preview" class="hidden max-h-32 object-contain rounded z-0" alt="Preview Foto">
+                                    <!-- Tombol Galeri -->
+                                    <div class="relative flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-300 rounded-xl bg-slate-50 hover:bg-slate-100 transition cursor-pointer">
+                                        <input type="file" id="doc-gallery" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="previewPhoto(this)">
+                                        <i class="fa-solid fa-images text-2xl text-slate-500 mb-2"></i>
+                                        <span class="text-xs font-medium text-slate-700 text-center">Pilih Galeri</span>
+                                    </div>
                                 </div>
+
+                                <!-- Container Preview Foto -->
+                                <div id="photo-preview-container" class="hidden relative border border-slate-300 rounded-xl bg-slate-50 overflow-hidden flex flex-col items-center justify-center min-h-[144px] p-2">
+                                    <img id="photo-preview" class="max-h-32 object-contain rounded z-0" alt="Preview Foto">
+                                </div>
+
                                 <div class="flex justify-between items-center mt-1.5 px-1">
                                     <p class="text-[11px] text-slate-400">Wajib melampirkan foto kondisi fisik APAR.</p>
                                     <button type="button" onclick="clearPhoto()" id="clear-photo-btn" class="hidden text-xs text-rose-500 hover:text-rose-600 font-semibold px-2 py-1 rounded hover:bg-rose-50 transition">
@@ -543,7 +556,7 @@
         let chartLocationInstance = null; 
 
         // URL Google Apps Script Backend Terbaru
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxURu8MV3Dfkswt20pev11V4f7E1pp2DD2aDmuhh1y3GFo5v_4ZWuTgwGgRUbOlv3r-/exec";
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyWPcIvY67M4qFmkYUiRfzPPm8QBlJSkdO9wTljba-wMR6UV2k5Gh4PNbGYp0yGTXkEmw/exec";
 
         // Helper WITA Timezone
         function getWitaDateTime() {
@@ -759,8 +772,9 @@
                 reader.onload = function(e) {
                     photoBase64 = e.target.result;
                     document.getElementById('photo-preview').src = photoBase64;
-                    document.getElementById('photo-preview').classList.remove('hidden');
-                    document.getElementById('photo-placeholder').classList.add('hidden');
+                    
+                    document.getElementById('photo-preview-container').classList.remove('hidden');
+                    document.getElementById('photo-action-container').classList.add('hidden');
                     document.getElementById('clear-photo-btn').classList.remove('hidden');
                 }
                 reader.readAsDataURL(file);
@@ -769,11 +783,15 @@
 
         function clearPhoto() {
             photoBase64 = null;
-            const input = document.getElementById('documentation-photo');
-            if (input) input.value = '';
+            const camInput = document.getElementById('doc-camera');
+            const galInput = document.getElementById('doc-gallery');
+            if (camInput) camInput.value = '';
+            if (galInput) galInput.value = '';
+            
             document.getElementById('photo-preview').src = '';
-            document.getElementById('photo-preview').classList.add('hidden');
-            document.getElementById('photo-placeholder').classList.remove('hidden');
+            
+            document.getElementById('photo-preview-container').classList.add('hidden');
+            document.getElementById('photo-action-container').classList.remove('hidden');
             document.getElementById('clear-photo-btn').classList.add('hidden');
         }
 
