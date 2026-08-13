@@ -389,7 +389,7 @@
                             <div>
                                 <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Dokumentasi (Foto) <span class="text-rose-500">*</span></label>
                                 <div class="border border-slate-300 rounded-xl bg-slate-50 overflow-hidden relative flex flex-col items-center justify-center min-h-[144px] p-2 hover:bg-slate-100 transition">
-                                    <input type="file" id="documentation-photo" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="previewPhoto(this)">
+                                    <input type="file" id="documentation-photo" accept="image/*" capture="environment" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="previewPhoto(this)">
                                     
                                     <div id="photo-placeholder" class="text-center text-slate-400 flex flex-col items-center pointer-events-none">
                                         <i class="fa-solid fa-camera text-3xl mb-2 text-red-500"></i>
