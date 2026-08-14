@@ -541,11 +541,11 @@
         const CHECKLIST_ITEMS = [
             { id: 'pin', name: 'Pin Pengaman', desc: 'Pin dan segel terpasang rapat dan utuh', icon: 'fa-shield-halved' },
             { id: 'tuas', name: 'Tuas (Handle)', desc: 'Kondisi tuas penekan bebas macet atau bengkok', icon: 'fa-hand-holding' },
-            { id: 'pressure', name: 'Pengukur Tekanan (Manometer)', desc: 'Jarum berada pada zona hijau (normal)', icon: 'fa-gauge-high' },
+            { id: 'pressure', name: 'Pengukur Tekanan', desc: 'Jarum berada pada zona hijau (normal)', icon: 'fa-gauge-high' },
             { id: 'selang', name: 'Selang (Hose)', desc: 'Selang mulus, tidak retak, pecah, atau tersumbat', icon: 'fa-ruler-horizontal' },
             { id: 'tabung', name: 'Tabung', desc: 'Fisik tabung bersih dari korosi, karat, atau penyok', icon: 'fa-bottle-water' },
             { id: 'nozzle', name: 'Nozzle', desc: 'Lubang corong nozzle bersih dari kotoran/serangga', icon: 'fa-spray-can' },
-            { id: 'sabuk', name: 'Sabuk Tabung / Bracket', desc: 'Gantungan atau sabuk pengikat kokoh', icon: 'fa-ring' }
+            { id: 'sabuk', name: 'Sabuk Tabung', desc: 'Gantungan atau sabuk pengikat kokoh', icon: 'fa-ring' }
         ];
 
         // Global State Store
@@ -556,7 +556,7 @@
         let chartLocationInstance = null; 
 
         // URL Google Apps Script Backend Terbaru
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxHjHYZp8i6hW89UB3jIzxLL60bsePhqOzNsup51x1uc7DX4BmI7JO9x0LxlBCmrjyjoQ/exec";
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbylEKDC1AoqUVGz8H28L89Jic7rTuMWRm4tvacXHTpDYNpPYs3SkxWkWEHI1V2zNnVxlA/exec";
 
         // Helper WITA Timezone
         function getWitaDateTime() {
@@ -728,19 +728,19 @@
 
                     <div class="flex items-center space-x-1.5 shrink-0 bg-white p-1 rounded-lg border border-slate-200 self-start sm:self-auto">
                         <label class="cursor-pointer">
-                            <input type="radio" name="chk_${item.id}" value="BAIK" checked class="peer hidden">
+                            <input type="radio" name="chk_${item.id}" value="Baik" checked class="peer hidden">
                             <span class="px-3 py-1.5 rounded-md text-xs font-semibold text-slate-600 peer-checked:bg-emerald-500 peer-checked:text-white transition inline-block">
                                 <i class="fa-solid fa-check mr-1"></i>Baik
                             </span>
                         </label>
                         <label class="cursor-pointer">
-                            <input type="radio" name="chk_${item.id}" value="RUSAK" class="peer hidden">
+                            <input type="radio" name="chk_${item.id}" value="Rusak" class="peer hidden">
                             <span class="px-3 py-1.5 rounded-md text-xs font-semibold text-slate-600 peer-checked:bg-rose-500 peer-checked:text-white transition inline-block">
                                 <i class="fa-solid fa-xmark mr-1"></i>Rusak
                             </span>
                         </label>
                         <label class="cursor-pointer">
-                            <input type="radio" name="chk_${item.id}" value="TIDAK_ADA" class="peer hidden">
+                            <input type="radio" name="chk_${item.id}" value="Hilang" class="peer hidden">
                             <span class="px-3 py-1.5 rounded-md text-xs font-semibold text-slate-600 peer-checked:bg-amber-500 peer-checked:text-white transition inline-block">
                                 <i class="fa-solid fa-minus mr-1"></i>Hilang
                             </span>
@@ -750,11 +750,48 @@
             `).join('');
         }
 
+        // Fungsi Kompresi Gambar Otomatis (Meringankan beban server & hemat kuota)
+        function compressImage(file, callback) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const MAX_SIZE = 1200; // Maksimal resolusi (Lebar/Tinggi)
+
+                    if (width > height) {
+                        if (width > MAX_SIZE) {
+                            height *= MAX_SIZE / width;
+                            width = MAX_SIZE;
+                        }
+                    } else {
+                        if (height > MAX_SIZE) {
+                            width *= MAX_SIZE / height;
+                            height = MAX_SIZE;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Kompresi menjadi format JPEG 80% (Standar web optimal)
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.8); 
+                    callback(dataUrl);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
         function setAllChecklistGood() {
             CHECKLIST_ITEMS.forEach(item => {
                 const radios = document.getElementsByName(`chk_${item.id}`);
                 for (let radio of radios) {
-                    if (radio.value === 'BAIK') radio.checked = true;
+                    if (radio.value === 'Baik' || radio.value === 'BAIK') radio.checked = true;
                 }
             });
         }
@@ -768,16 +805,15 @@
                     return;
                 }
 
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    photoBase64 = e.target.result;
+                // Menggunakan fungsi kompresi sebelum ditampilkan
+                compressImage(file, function(compressedBase64) {
+                    photoBase64 = compressedBase64;
                     document.getElementById('photo-preview').src = photoBase64;
                     
                     document.getElementById('photo-preview-container').classList.remove('hidden');
                     document.getElementById('photo-action-container').classList.add('hidden');
                     document.getElementById('clear-photo-btn').classList.remove('hidden');
-                }
-                reader.readAsDataURL(file);
+                });
             }
         }
 
@@ -817,10 +853,12 @@
 
             CHECKLIST_ITEMS.forEach(item => {
                 const checkedElem = document.querySelector(`input[name="chk_${item.id}"]:checked`);
-                const selected = checkedElem ? checkedElem.value : 'BAIK';
+                const selected = checkedElem ? checkedElem.value : 'Baik';
                 checklistResults[item.id] = selected;
-                if (selected === 'RUSAK') hasDamaged = true;
-                if (selected === 'TIDAK_ADA') hasMissing = true;
+                
+                const upVal = selected.toUpperCase();
+                if (upVal === 'RUSAK') hasDamaged = true;
+                if (upVal === 'HILANG' || upVal === 'TIDAK_ADA') hasMissing = true;
             });
 
             let overallStatus = 'BAIK';
@@ -1116,10 +1154,16 @@
             chartStatusInstance.update();
 
             const goodCounts = CHECKLIST_ITEMS.map(ci => {
-                return inspections.filter(i => i.checklist && i.checklist[ci.id] === 'BAIK').length;
+                return inspections.filter(i => {
+                    const val = (i.checklist && i.checklist[ci.id]) ? String(i.checklist[ci.id]).toUpperCase() : 'BAIK';
+                    return val === 'BAIK' || val === 'BAIK'; // Mencakup Baik dan BAIK
+                }).length;
             });
             const issueCounts = CHECKLIST_ITEMS.map(ci => {
-                return inspections.filter(i => i.checklist && i.checklist[ci.id] !== 'BAIK').length;
+                return inspections.filter(i => {
+                    const val = (i.checklist && i.checklist[ci.id]) ? String(i.checklist[ci.id]).toUpperCase() : 'BAIK';
+                    return val !== 'BAIK';
+                }).length;
             });
 
             chartChecklistInstance.data.datasets[0].data = goodCounts;
@@ -1217,11 +1261,19 @@
                     <h5 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Hasil Evaluasi 7 Komponen Utama</h5>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                         ${CHECKLIST_ITEMS.map(ci => {
-                            const val = item.checklist ? item.checklist[ci.id] : 'BAIK';
+                            const rawVal = item.checklist ? item.checklist[ci.id] : 'Baik';
+                            const upVal = String(rawVal).toUpperCase();
+                            
                             let badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
                             let label = 'Baik';
-                            if (val === 'RUSAK') { badgeClass = 'bg-rose-50 text-rose-700 border-rose-200'; label = 'Rusak'; }
-                            if (val === 'TIDAK_ADA') { badgeClass = 'bg-amber-50 text-amber-700 border-amber-200'; label = 'Hilang/Tdk Ada'; }
+                            
+                            if (upVal === 'RUSAK') { 
+                                badgeClass = 'bg-rose-50 text-rose-700 border-rose-200'; 
+                                label = 'Rusak'; 
+                            } else if (upVal === 'HILANG' || upVal === 'TIDAK_ADA') { 
+                                badgeClass = 'bg-amber-50 text-amber-700 border-amber-200'; 
+                                label = 'Hilang'; 
+                            }
 
                             return `
                                 <div class="flex items-center justify-between p-2.5 rounded-lg border border-slate-100 bg-slate-50/50">
@@ -1280,12 +1332,20 @@
                             </tr>
                         </thead>
                         <tbody>
-                            ${CHECKLIST_ITEMS.map(ci => `
+                            ${CHECKLIST_ITEMS.map(ci => {
+                                const rawVal = item.checklist ? (item.checklist[ci.id] || 'Baik') : 'Baik';
+                                const upVal = String(rawVal).toUpperCase();
+                                let displayVal = 'Baik';
+                                if(upVal === 'RUSAK') displayVal = 'Rusak';
+                                if(upVal === 'HILANG' || upVal === 'TIDAK_ADA') displayVal = 'Hilang';
+                                
+                                return `
                                 <tr>
                                     <td style="padding: 4px;">${ci.name}</td>
-                                    <td style="padding: 4px; text-align: center;">${item.checklist ? (item.checklist[ci.id] || 'BAIK') : 'BAIK'}</td>
+                                    <td style="padding: 4px; text-align: center;">${displayVal}</td>
                                 </tr>
-                            `).join('')}
+                                `;
+                            }).join('')}
                         </tbody>
                     </table>
                     <div style="margin-top: 15px; font-size: 11px;">
