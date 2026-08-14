@@ -275,13 +275,13 @@
                     <table class="w-full text-sm text-left text-slate-600">
                         <thead class="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-100">
                             <tr>
+                                <th class="px-6 py-3">No. ID Laporan</th>
+                                <th class="px-6 py-3">Nama Pemeriksa</th>
                                 <th class="px-6 py-3">Kode / ID APAR</th>
                                 <th class="px-6 py-3">Lokasi</th>
                                 <th class="px-6 py-3">Jenis APAR</th>
                                 <th class="px-6 py-3">Tanggal Inspeksi</th>
-                                <th class="px-6 py-3">Pemeriksa</th>
-                                <th class="px-6 py-3">Status</th>
-                                <th class="px-6 py-3 text-center">Aksi</th>
+                                <th class="px-6 py-3">Hasil Evaluasi</th>
                             </tr>
                         </thead>
                         <tbody id="recent-table-body" class="divide-y divide-slate-100">
@@ -468,13 +468,13 @@
                     <table class="w-full text-sm text-left text-slate-600">
                         <thead class="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200">
                             <tr>
-                                <th class="px-4 py-3.5">Kode APAR</th>
+                                <th class="px-4 py-3.5">No. ID Laporan</th>
+                                <th class="px-4 py-3.5">Nama Pemeriksa</th>
+                                <th class="px-4 py-3.5">Kode / ID APAR</th>
                                 <th class="px-4 py-3.5">Lokasi</th>
                                 <th class="px-4 py-3.5">Jenis APAR</th>
-                                <th class="px-4 py-3.5">Tgl Inspeksi</th>
-                                <th class="px-4 py-3.5">Pemeriksa</th>
+                                <th class="px-4 py-3.5">Tanggal Inspeksi</th>
                                 <th class="px-4 py-3.5">Hasil Evaluasi</th>
-                                <th class="px-4 py-3.5 text-center">Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="history-table-body" class="divide-y divide-slate-100">
@@ -556,7 +556,7 @@
         let chartLocationInstance = null; 
 
         // URL Google Apps Script Backend Terbaru
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxwd8LdRX_QNAFYc9tOThNoHmwHdxqlTlBhrj1m2lZSxLL0gkSlrJHfBzDIqayXnRgSnw/exec";
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyECmJeAiGWXR_I4SaZkIegqf64NYAa5MYmE3Ad8aCwHWqMGupP0l58t8h8pj2YWoyWMQ/exec";
 
         // Helper WITA Timezone
         function getWitaDateTime() {
@@ -668,8 +668,7 @@
 
                 const response = await fetch(fetchUrl, {
                     method: 'GET',
-                    redirect: 'follow',
-                    headers: { 'Accept': 'application/json' }
+                    redirect: 'follow'
                 });
                 
                 if (!response.ok) {
@@ -677,31 +676,38 @@
                 }
                 
                 const rawText = await response.text();
-                let result;
                 
+                // Deteksi Keamanan/Pemblokiran Google (Salah Deploy)
+                if (rawText.toLowerCase().includes('<!doctype html>') || rawText.toLowerCase().includes('<html')) {
+                    throw new Error("Akses Ditolak Google! Pastikan Apps Script di-deploy dengan pengaturan: Execute as = 'Me', dan Who has access = 'Anyone'.");
+                }
+
+                let result;
                 try {
                     result = JSON.parse(rawText);
                 } catch (parseError) {
-                    throw new Error("Akses Ditolak Google. Pastikan setelan Apps Script -> Who has access: 'Anyone'.");
+                    throw new Error("Format data dari server tidak sesuai/rusak: " + parseError.message);
                 }
 
                 if (result.status === 'success') {
-                    // Filter pintar untuk membuang baris kosong yang mungkin terbaca
-                    inspections = result.data.filter(item => item && String(item.code || '').trim() !== '' && String(item.code || '').trim() !== '-'); 
+                    // Hapus filter yang terlalu ketat agar semua data masuk
+                    inspections = result.data || []; 
                     saveToLocalStorage();
-                    showToast("Sinkronisasi Cloud berhasil.", "success");
+                    
+                    if (inspections.length > 0) {
+                        showToast(`Berhasil memuat ${inspections.length} data inspeksi dari Cloud.`, "success");
+                    } else {
+                        showToast("Data di Spreadsheet kosong atau belum ada data.", "info");
+                    }
                 } else {
-                    throw new Error(result.message);
+                    throw new Error(result.message || "Unknown server error");
                 }
             } catch (error) {
-                console.warn("Mode Offline aktif:", error.message);
+                console.warn("Kesalahan Sinkronisasi:", error.message);
                 loadLocalStorageData();
-
-                if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
-                    showToast("Mode Offline: Menggunakan data lokal.", "warning");
-                } else {
-                    showToast(`Gagal membaca Cloud: ${error.message}`, "warning");
-                }
+                
+                // Tampilkan Popup Error agar pengguna tahu persis masalahnya
+                customAlert("Peringatan Sinkronisasi Cloud", error.message, "error");
             } finally {
                 updateDashboard();
                 if (!document.getElementById('view-history').classList.contains('hidden')) {
@@ -976,9 +982,9 @@
 
         function updateDashboard() {
             const total = inspections.length;
-            const good = inspections.filter(i => i.status === 'BAIK').length;
-            const warning = inspections.filter(i => i.status === 'PERHATIAN').length;
-            const danger = inspections.filter(i => i.status === 'RUSAK').length;
+            const good = inspections.filter(i => String(i.status || '').toUpperCase() === 'BAIK').length;
+            const warning = inspections.filter(i => String(i.status || '').toUpperCase() === 'PERHATIAN').length;
+            const danger = inspections.filter(i => String(i.status || '').toUpperCase() === 'RUSAK').length;
 
             document.getElementById('stat-total').innerText = total;
             document.getElementById('stat-good').innerText = good;
@@ -1001,17 +1007,13 @@
 
             tbody.innerHTML = recent.map(item => `
                 <tr class="hover:bg-slate-50 transition">
+                    <td class="px-6 py-4 font-mono text-xs text-slate-500">${escapeHtml(item.id)}</td>
+                    <td class="px-6 py-4">${escapeHtml(item.inspector)}</td>
                     <td class="px-6 py-4 font-bold text-slate-900">${escapeHtml(item.code)}</td>
                     <td class="px-6 py-4">${escapeHtml(item.location)}</td>
                     <td class="px-6 py-4">${escapeHtml(item.type)}</td>
                     <td class="px-6 py-4">${formatDate(item.inspectionDate)}</td>
-                    <td class="px-6 py-4">${escapeHtml(item.inspector)}</td>
                     <td class="px-6 py-4">${getStatusBadge(item.status)}</td>
-                    <td class="px-6 py-4 text-center">
-                        <button onclick="viewDetail('${item.id}')" class="text-red-600 hover:text-red-800 font-semibold text-xs">
-                            Detail <i class="fa-solid fa-chevron-right ml-0.5"></i>
-                        </button>
-                    </td>
                 </tr>
             `).join('');
         }
@@ -1111,9 +1113,11 @@
                     locationStats[loc] = { total: 0, baik: 0, perhatian: 0, rusak: 0 };
                 }
                 locationStats[loc].total++;
-                if (item.status === 'BAIK') locationStats[loc].baik++;
-                else if (item.status === 'PERHATIAN') locationStats[loc].perhatian++;
-                else if (item.status === 'RUSAK') locationStats[loc].rusak++;
+                
+                const s = String(item.status || '').toUpperCase();
+                if (s === 'BAIK') locationStats[loc].baik++;
+                else if (s === 'PERHATIAN') locationStats[loc].perhatian++;
+                else if (s === 'RUSAK') locationStats[loc].rusak++;
             });
 
             // Urutkan lokasi berdasarkan total APAR terbanyak
@@ -1183,8 +1187,11 @@
             const filtered = inspections.filter(item => {
                 const matchesQuery = String(item.code || '').toLowerCase().includes(query) ||
                                      String(item.location || '').toLowerCase().includes(query) ||
-                                     String(item.inspector || '').toLowerCase().includes(query);
-                const matchesStatus = statusFilter === 'ALL' || item.status === statusFilter;
+                                     String(item.inspector || '').toLowerCase().includes(query) ||
+                                     String(item.id || '').toLowerCase().includes(query);
+                
+                const s = String(item.status || '').toUpperCase();
+                const matchesStatus = statusFilter === 'ALL' || s === statusFilter;
                 return matchesQuery && matchesStatus;
             });
 
@@ -1195,20 +1202,13 @@
 
             tbody.innerHTML = filtered.map(item => `
                 <tr class="hover:bg-slate-50 transition">
+                    <td class="px-4 py-3.5 font-mono text-xs text-slate-500">${escapeHtml(item.id)}</td>
+                    <td class="px-4 py-3.5">${escapeHtml(item.inspector)}</td>
                     <td class="px-4 py-3.5 font-bold text-slate-900">${escapeHtml(item.code)}</td>
                     <td class="px-4 py-3.5 max-w-[200px] truncate">${escapeHtml(item.location)}</td>
                     <td class="px-4 py-3.5">${escapeHtml(item.type)}</td>
                     <td class="px-4 py-3.5">${formatDate(item.inspectionDate)}</td>
-                    <td class="px-4 py-3.5">${escapeHtml(item.inspector)}</td>
                     <td class="px-4 py-3.5">${getStatusBadge(item.status)}</td>
-                    <td class="px-4 py-3.5 text-center space-x-2">
-                        <button onclick="viewDetail('${item.id}')" class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs transition" title="Lihat Detail & Cetak">
-                            <i class="fa-solid fa-eye"></i>
-                        </button>
-                        <button onclick="deleteInspection('${item.id}')" class="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs transition" title="Hapus Data (Hanya Lokal)">
-                            <i class="fa-solid fa-trash"></i>
-                        </button>
-                    </td>
                 </tr>
             `).join('');
         }
@@ -1376,7 +1376,8 @@
         }
 
         function getStatusBadge(status) {
-            switch (status) {
+            const s = String(status || '').toUpperCase();
+            switch (s) {
                 case 'BAIK':
                     return `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800"><i class="fa-solid fa-circle-check mr-1 text-emerald-600"></i> Layak / Baik</span>`;
                 case 'PERHATIAN':
@@ -1384,7 +1385,7 @@
                 case 'RUSAK':
                     return `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-800"><i class="fa-solid fa-circle-xmark mr-1 text-rose-600"></i> Rusak / Ganti</span>`;
                 default:
-                    return `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-800">${escapeHtml(status)}</span>`;
+                    return `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-800">${escapeHtml(s)}</span>`;
             }
         }
 
@@ -1456,3 +1457,6 @@
     </script>
 </body>
 </html>
+```
+
+Saya telah memperbarui variabel `GOOGLE_SCRIPT_URL` di dalam kode HTML agar mengarah ke link exec backend yang baru saja Anda berikan. Saat Anda memuat ulang atau membuka file ini di browser, sistem akan langsung menarik (GET) dan mengirim (POST) data ke Spreadsheet terbaru Anda. Pastikan untuk menekan "Refresh Data" di aplikasi untuk memastikan sinkronisasi berhasil!
