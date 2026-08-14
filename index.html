@@ -281,6 +281,7 @@
                                 <th class="px-6 py-3">Lokasi</th>
                                 <th class="px-6 py-3">Jenis APAR</th>
                                 <th class="px-6 py-3">Tanggal Inspeksi</th>
+                                <th class="px-6 py-3">Masa Kadaluarsa</th>
                                 <th class="px-6 py-3">Hasil Evaluasi</th>
                             </tr>
                         </thead>
@@ -474,6 +475,7 @@
                                 <th class="px-4 py-3.5">Lokasi</th>
                                 <th class="px-4 py-3.5">Jenis APAR</th>
                                 <th class="px-4 py-3.5">Tanggal Inspeksi</th>
+                                <th class="px-4 py-3.5">Masa Kadaluarsa</th>
                                 <th class="px-4 py-3.5">Hasil Evaluasi</th>
                             </tr>
                         </thead>
@@ -556,7 +558,7 @@
         let chartLocationInstance = null; 
 
         // URL Google Apps Script Backend Terbaru
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyECmJeAiGWXR_I4SaZkIegqf64NYAa5MYmE3Ad8aCwHWqMGupP0l58t8h8pj2YWoyWMQ/exec";
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbykyldByWlFMjB7eWt3pmvTI8vlzBJSB5v_k9VIXy406xshW0-5kossapiefPNRQMEHTQ/exec";
 
         // Helper WITA Timezone
         function getWitaDateTime() {
@@ -661,8 +663,8 @@
             const historyBody = document.getElementById('history-table-body');
 
             try {
-                if(tbody) tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Sinkronisasi dari server...</td></tr>`;
-                if(historyBody) historyBody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Sinkronisasi dari server...</td></tr>`;
+                if(tbody) tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-slate-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Sinkronisasi dari server...</td></tr>`;
+                if(historyBody) historyBody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-slate-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Sinkronisasi dari server...</td></tr>`;
 
                 const fetchUrl = GOOGLE_SCRIPT_URL + "?t=" + new Date().getTime();
 
@@ -1001,19 +1003,20 @@
             const recent = inspections.slice(0, 5);
 
             if (recent.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-400">Belum ada data inspeksi.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-slate-400">Belum ada data inspeksi.</td></tr>`;
                 return;
             }
 
             tbody.innerHTML = recent.map(item => `
                 <tr class="hover:bg-slate-50 transition">
-                    <td class="px-6 py-4 font-mono text-xs text-slate-500">${escapeHtml(item.id)}</td>
-                    <td class="px-6 py-4">${escapeHtml(item.inspector)}</td>
-                    <td class="px-6 py-4 font-bold text-slate-900">${escapeHtml(item.code)}</td>
-                    <td class="px-6 py-4">${escapeHtml(item.location)}</td>
-                    <td class="px-6 py-4">${escapeHtml(item.type)}</td>
-                    <td class="px-6 py-4">${formatDate(item.inspectionDate)}</td>
-                    <td class="px-6 py-4">${getStatusBadge(item.status)}</td>
+                    <td class="px-3 py-2 font-mono text-[11px] text-slate-500">${escapeHtml(item.id)}</td>
+                    <td class="px-3 py-2 text-[11px]">${escapeHtml(item.inspector)}</td>
+                    <td class="px-3 py-2 text-[11px] text-slate-900">${escapeHtml(item.code)}</td>
+                    <td class="px-3 py-2 text-[11px]">${escapeHtml(item.location)}</td>
+                    <td class="px-3 py-2 text-[11px]">${escapeHtml(item.type)}</td>
+                    <td class="px-3 py-2 text-[11px]">${formatDate(item.inspectionDate)}</td>
+                    <td class="px-3 py-2 text-[11px] text-rose-600 font-medium">${formatDate(item.expDate)}</td>
+                    <td class="px-3 py-2 text-[11px]">${getStatusBadge(item.status)}</td>
                 </tr>
             `).join('');
         }
@@ -1196,19 +1199,20 @@
             });
 
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-400">Tidak ada data inspeksi yang sesuai.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-slate-400">Tidak ada data inspeksi yang sesuai.</td></tr>`;
                 return;
             }
 
             tbody.innerHTML = filtered.map(item => `
                 <tr class="hover:bg-slate-50 transition">
-                    <td class="px-4 py-3.5 font-mono text-xs text-slate-500">${escapeHtml(item.id)}</td>
-                    <td class="px-4 py-3.5">${escapeHtml(item.inspector)}</td>
-                    <td class="px-4 py-3.5 font-bold text-slate-900">${escapeHtml(item.code)}</td>
-                    <td class="px-4 py-3.5 max-w-[200px] truncate">${escapeHtml(item.location)}</td>
-                    <td class="px-4 py-3.5">${escapeHtml(item.type)}</td>
-                    <td class="px-4 py-3.5">${formatDate(item.inspectionDate)}</td>
-                    <td class="px-4 py-3.5">${getStatusBadge(item.status)}</td>
+                    <td class="px-3 py-2 font-mono text-[11px] text-slate-500">${escapeHtml(item.id)}</td>
+                    <td class="px-3 py-2 text-[11px]">${escapeHtml(item.inspector)}</td>
+                    <td class="px-3 py-2 text-[11px] text-slate-900">${escapeHtml(item.code)}</td>
+                    <td class="px-3 py-2 text-[11px] max-w-[200px] truncate">${escapeHtml(item.location)}</td>
+                    <td class="px-3 py-2 text-[11px]">${escapeHtml(item.type)}</td>
+                    <td class="px-3 py-2 text-[11px]">${formatDate(item.inspectionDate)}</td>
+                    <td class="px-3 py-2 text-[11px] text-rose-600 font-medium">${formatDate(item.expDate)}</td>
+                    <td class="px-3 py-2 text-[11px]">${getStatusBadge(item.status)}</td>
                 </tr>
             `).join('');
         }
@@ -1457,6 +1461,3 @@
     </script>
 </body>
 </html>
-```
-
-Saya telah memperbarui variabel `GOOGLE_SCRIPT_URL` di dalam kode HTML agar mengarah ke link exec backend yang baru saja Anda berikan. Saat Anda memuat ulang atau membuka file ini di browser, sistem akan langsung menarik (GET) dan mengirim (POST) data ke Spreadsheet terbaru Anda. Pastikan untuk menekan "Refresh Data" di aplikasi untuk memastikan sinkronisasi berhasil!
